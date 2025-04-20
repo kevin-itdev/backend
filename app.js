@@ -7,7 +7,10 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {cors: {origin: "*"}});
+const io = new Server(server, {cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+}});
 
 const url = process.env.WS_URL;
 const apiKey = process.env.API_KEY;
@@ -53,7 +56,7 @@ async function createWebSocket() {
         ws.on('message', function(data) {
             try {
                 const info = JSON.parse(data);
-                if(info.MsgType != 'OrderSingleStatus') {
+                if(info.MsgType != 'OrderSingleStatus' || info.MsgType != 'Heartbeat') {
                     console.log('message:\n', info); // payload received
                     get(info);
                 }
