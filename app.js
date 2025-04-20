@@ -1,3 +1,4 @@
+console.log('v2025/04/20');
 const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
@@ -7,10 +8,7 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-}});
+const io = new Server(server, {cors: { origin: "*", methods: ["GET", "POST"] }});
 
 const url = process.env.WS_URL;
 const apiKey = process.env.API_KEY;
@@ -60,13 +58,9 @@ async function createWebSocket() {
                     console.log('message:\n', info); // payload received
                     get(info);
                 }
-            } catch (err) {
-                console.error('Error parsing message:', err);
-            }
+            } catch (err) { console.error('Error parsing message:', err); }
 
-            if (time + 12 * 3600 <= new Date().getTime() / 1000) {
-                ws.close();
-            }
+            if (time + 12 * 3600 <= new Date().getTime() / 1000) { ws.close(); }
         });
 
         ws.on('error', function(error) {
@@ -109,6 +103,8 @@ async function createWebSocket() {
 
             socket.on('disconnect', function() { console.log('user disconnected'); });
         });
+
+        app.get('/', (req, res) => { res.send('Server is up and running!'); });
 
         server.listen(3001, () => {
             console.log('listening on port:3001');
