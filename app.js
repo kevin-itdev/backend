@@ -1,4 +1,4 @@
-console.log('v2025/04/20');
+console.log('v2025/04/20 17:30');
 const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
@@ -54,7 +54,7 @@ async function createWebSocket() {
         ws.on('message', function(data) {
             try {
                 const info = JSON.parse(data);
-                if(info.MsgType != 'OrderSingleStatus' || info.MsgType != 'Heartbeat') {
+                if(info.MsgType != 'OrderSingleStatus' && info.MsgType != 'Heartbeat') {
                     console.log(`message(${info.MsgType}):\n`, info); // payload received
                     get(info);
                 }
