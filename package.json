@@ -1,0 +1,17 @@
+{
+  "name": "lightspeed",
+  "version": "1.0.0",
+  "main": "app.js",
+  "keywords": [],
+  "author": "Kevin Beltran",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "http": "^0.0.1-security",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.1"
+  }
+}
