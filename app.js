@@ -55,7 +55,7 @@ async function createWebSocket() {
             try {
                 const info = JSON.parse(data);
                 if(info.MsgType != 'OrderSingleStatus' || info.MsgType != 'Heartbeat') {
-                    console.log('message:\n', info); // payload received
+                    console.log(`message(${info.MsgType}):\n`, info); // payload received
                     get(info);
                 }
             } catch (err) { console.error('Error parsing message:', err); }
