@@ -39,8 +39,8 @@ const startRecurringPortfolioUpdates = async (socket, token, accountId) => {
     stopRecurringPortfolioUpdates(socket);
     const updateFunc = async () => {
         await updatePortfolio(socket, token, accountId);
-        // const timeoutId = setTimeout(updateFunc, 30 * 1000);
-        // activePortfolioUpdateTimers.set(socket, timeoutId);
+        const timeoutId = setTimeout(updateFunc, 30 * 1000);
+        activePortfolioUpdateTimers.set(socket, timeoutId);
     };
     await updateFunc();
 };
@@ -91,26 +91,22 @@ const closePosSilex = async(socket, data, token, accountId) => {
 const openOrdSilex = async(socket, data, token, accountId) => {
  
     const symbol = data.orderLegs[0].symbol;
-    const type = (data.orderLegs[0].price) ? 'ORD_TYPE_LIMIT' : 'ORD_TYPE_MARKET';
+    const type = (data.orderLegs[0]?.price) ? 'ORD_TYPE_LIMIT' : 'ORD_TYPE_MARKET';
     const quantity = parseInt(data.orderLegs[0].quantity);
-    const price = parseFloat(data.orderLegs[0].price)
+    const price = parseFloat(data.orderLegs[0]?.price)
     const allRequests = [];
-    let expiration, strike, option, action, subRequest; 
+    let action, subRequest; 
 
 
     for(let i = 0; i < 4; i++) 
-        if(symbol && data.orderLegs[i].expiration && data.orderLegs[i].strike) {
-
-            // console.log(data.orderLegs[i]);
-            expiration = data.orderLegs[i].expiration.substring(2,8);
-            strike = data.orderLegs[i].strike;
-            option = (data.orderLegs[i].option === 'CALL') ? 'C' : 'P';
+        if(symbol) {
+            
             action = (data.orderLegs[i].action === 'BUY') ? 'SIDE_BUY' : 'SIDE_SELL';
             subRequest = {
                 position_effect : 'POSITION_EFFECT_OPEN',
                 ratio : 1,
                 side : action,
-                symbol : `${symbol}/${expiration}/${strike}${option}`
+                symbol : symbol
                 }
             allRequests.push(subRequest); 
         }
@@ -141,7 +137,7 @@ const openOrdSilex = async(socket, data, token, accountId) => {
             tif : 'TIF_DAY'
         }
     
-    // console.log('order request ->',request);    
+    console.log('order request ->', request);    
     await callAPI(method.OPEN_ORDER, request, token, null);
     await updatePortfolio(socket, token, accountId);       
 }
@@ -254,8 +250,8 @@ async function callAPI(i, payload, token, accountId) {
         if(i == method.INIT) { token = data.token; return token; }
         if(i == method.ACC_ID) { accountId = data?.accounts[0]?.id; return accountId; }
         if(i == method.OPEN_ORDER) { console.log('method.OPEN_ORDER',data); return null; }
-        if(i == method.GET_ORDERS) { console.log(/*'method.GET_ORDERS',data.orders/*[5].multiLegOrder.orderUpdates*/); return data.orders; }
-        if(i == method.GET_POSITIONS) { console.log(/*'method.GET_POSITIONS',data.positions*/); return data.positions; }
+        if(i == method.GET_ORDERS) { /*console.log(/*'method.GET_ORDERS',data.orders/*[5].multiLegOrder.orderUpdates);*/ return data.orders; }
+        if(i == method.GET_POSITIONS) { /*console.log(/*'method.GET_POSITIONS',data.positions);*/ return data.positions; }
         if(i == method.CLOSE_ORDER) { console.log('method.CLOSE_ORDER',data); return data; }
         if(i == method.CLOSE_POSITION) { console.log('method.CLOSE_POSITION',data); return data; }
         if(i == method.GET_CHAIN) { console.log('method.GET_CHAIN',/*data.optionChains[0].underlying,*//*data.optionChains[0].roots,*//*data.optionChains[0].options,*//*data.optionChains[0].optionSeries*/); return data; }
