@@ -1,21 +1,23 @@
-console.log('v2025/05/22');
+console.log('v2025/05/28');
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config();
 const http = require('http');
 const { Server } = require('socket.io');
 const { connectToLightSpeed, closePosLightSpeed, openOrdLightSpeed } = require('./lightspeed');
 const { connectToSilex, closePosSilex, openOrdSilex, stopRecurringPortfolioUpdates } = require('./silex');
 
+const allowedOrigins = [process.env.LOCAL_ORIGIN, process.env.VERCEL_ORIGIN];
 const app = express();
 app.use(cors({ 
-    origin:  "*" || "http://localhost:5173/",  
+    origin:  allowedOrigins.filter(Boolean),  
     credentials: true 
     }));
 app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, {cors: { 
-    origin: "*" || "http://localhost:5173/", 
+    origin: allowedOrigins.filter(Boolean),
     methods: ["GET", "POST"] 
 }});
 
