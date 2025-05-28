@@ -89,27 +89,26 @@ const closePosSilex = async(socket, data, token, accountId) => {
 };
 
 const openOrdSilex = async(socket, data, token, accountId) => {
- 
-    const symbol = data.orderLegs[0].symbol;
+
     const type = (data.orderLegs[0]?.price) ? 'ORD_TYPE_LIMIT' : 'ORD_TYPE_MARKET';
     const quantity = parseInt(data.orderLegs[0].quantity);
     const price = parseFloat(data.orderLegs[0]?.price)
     const allRequests = [];
-    let action, subRequest; 
+    let symbol, action, subRequest; 
 
 
-    for(let i = 0; i < 4; i++) 
-        if(symbol) {
+    for(let i = 0; i < 4; i++) {
             
-            action = (data.orderLegs[i].action === 'BUY') ? 'SIDE_BUY' : 'SIDE_SELL';
-            subRequest = {
-                position_effect : 'POSITION_EFFECT_OPEN',
-                ratio : 1,
-                side : action,
-                symbol : symbol
-                }
-            allRequests.push(subRequest); 
-        }
+        symbol = data.orderLegs[i].symbol;
+        action = (data.orderLegs[i].action === 'BUY') ? 'SIDE_BUY' : 'SIDE_SELL';
+        subRequest = {
+            position_effect : 'POSITION_EFFECT_OPEN',
+            ratio : 1,
+            side : action,
+            symbol : symbol
+            }
+        allRequests.push(subRequest); 
+    }
 
 
     let request;
