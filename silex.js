@@ -27,9 +27,24 @@ const activePortfolioUpdateTimers = new WeakMap();
 const connectToSilex = async(socket) => {
     const token = await callAPI(method.INIT, loginMessage, null, null);
     const accountId = await callAPI(method.ACC_ID, null, token, null);
-    const optionsList = await callAPI(method.GET_CHAIN,{ underlyingSymbols: ['$SPX'] },token,null);
-    sendSocket(socket, 'optionsTable', optionsList);
+    const optionsList = await callAPI(method.GET_CHAIN,{ underlyingSymbols: ['$SPX'] }, token, null);
+    sendSocket(socket, 'optionsTable', optionsList.optionChains[0].optionSeries[0].optionSymbols);
     
+    socket.on('fetchOptionChainsByDate', async (data) =>{
+
+        console.log('Received a new date. Fetching Option Chains for:', data);
+        const year = data.date.substring(2,4);
+        const month = data.date.substring(5,7);
+        const day = data.date.substring(8,10);
+        sendSocket(socket, 'optionsTable', optionsList);
+
+        for(let i = 0; i <= optionsList.optionChains[0].optionSeries.length - 1; i++) 
+            if(optionsList.optionChains[0].optionSeries[i].optionSymbols[0].indexOf(year) > 0 && optionsList.optionChains[0].optionSeries[i].optionSymbols[0].indexOf(month) > 0 && optionsList.optionChains[0].optionSeries[i].optionSymbols[0].indexOf(day) > 0) {
+                sendSocket(socket, 'optionsTable', optionsList.optionChains[0].optionSeries[i].optionSymbols);
+                break;
+            }
+    });
+   
     startRecurringPortfolioUpdates(socket, token, accountId);
     return [token, accountId];
 };
@@ -174,13 +189,13 @@ const updatePortfolio = async(socket, token, accountId) => {
 
                     // combinedList[i].multiLegOrder.legs[j].id
                     side = (combinedList[i].multiLegOrder.legs[j].side === 'SIDE_BUY') ? 'BUY' : 'SELL';
-                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: `Order ID: ${combinedList[i].multiLegOrder.curOrdId}` });
+                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: combinedList[i].multiLegOrder.ordStatus });
                 }
 
                 if(combinedList[i].multiLegOrder.ordStatus === 'ORD_STATUS_PARTIALLY_FILLED') {
 
                     side = (combinedList[i].multiLegOrder.legs[j].side === 'SIDE_BUY') ? 'BUY' : 'SELL';
-                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].leavesQty, profits: `Order ID: ${combinedList[i].multiLegOrder.curOrdId}`});
+                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].leavesQty, profits: 'ORD_PARTIALLY_FILLED' });
                 }      
             }
 

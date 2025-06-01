@@ -1,4 +1,4 @@
-console.log('v2025/05/28');
+console.log('v2025/06/01');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
