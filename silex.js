@@ -75,9 +75,12 @@ const stopRecurringPortfolioUpdates = (socket) => {
 const closePosSilex = async(socket, data, token, accountId) => {
 
     let request, action;
+    let specRoute = timeFilter();
+
+
     for(let i = data.length - 1; i >= 0; i--) {
        
-        if(isNaN(data[i].profits)) {//this is an order, it contains a string Order ID: ...
+        if(isNaN(data[i].profits)) { //this is an order, it contains a string Order ID: ...
             
             request = { curOrdId: data[i].profits.substring(10) };
             await callAPI(method.CLOSE_ORDER, request, token, null);
@@ -91,7 +94,7 @@ const closePosSilex = async(socket, data, token, accountId) => {
                 // price: parseFloat(data.orderLegs[i].price), 
                 price_type: 'PRICE_TYPE_PER_UNIT',
                 qty: Math.abs(parseInt(data[i].contracts)),      
-                route: 'CBOE',
+                route: specRoute,
                 side: action,
                 symbol: data[i].symbol,
                 tif: 'TIF_DAY' 
@@ -110,6 +113,7 @@ const openOrdSilex = async(socket, data, token, accountId) => {
     const price = parseFloat(data.orderLegs[0]?.price)
     const allRequests = [];
     let symbol, action, subRequest; 
+    let specRoute = timeFilter();
 
 
     for(let i = 0; i < 4; i++) {
@@ -136,7 +140,7 @@ const openOrdSilex = async(socket, data, token, accountId) => {
             price : price,
             price_type : 'PRICE_TYPE_PER_UNIT',
             qty : quantity,
-            route : 'CBOE',
+            route : specRoute,
             tif : 'TIF_DAY'
         }
     else 
@@ -147,7 +151,7 @@ const openOrdSilex = async(socket, data, token, accountId) => {
             ord_type : 'ORD_TYPE_MARKET',
             price_type : 'PRICE_TYPE_PER_UNIT',
             qty : quantity,
-            route : 'CBOE',
+            route : specRoute,
             tif : 'TIF_DAY'
         }
     
@@ -161,6 +165,25 @@ const openOrdSilex = async(socket, data, token, accountId) => {
 
 
 
+function timeFilter() {
+
+    let specRoute = 'STAGE';     // route: 'CBOE', old style from the docs  
+    const now = new Date(); 
+    const start = [new Date(now), new Date(now)]; 
+    const end = [new Date(now), new Date(now)];   
+
+    start[0].setUTCHours(8, 0, 0, 0); 
+    end[0].setUTCHours(8, 15, 0, 0); 
+    start[1].setUTCHours(8, 15, 0, 0); 
+    end[1].setUTCHours(9, 0, 0, 0); 
+
+    if (start[0].getTime() <= now.getTime() && now.getTime() < end[0].getTime())
+        specRoute = 'EDFP OPT4 ML SEN';
+    if (start[1].getTime() <= now.getTime() && now.getTime() < end[1].getTime())
+        specRoute = 'EDF_SPXML_SMART_ETH';
+
+    return specRoute;
+}
 
 
 
@@ -168,8 +191,7 @@ const openOrdSilex = async(socket, data, token, accountId) => {
 
 
 
-
-const updatePortfolio = async(socket, token, accountId) => {
+const run = async(socket, token, accountId) => {
 
     const orders = await callAPI(method.GET_ORDERS, null, token, null);
     const positions = await callAPI(method.GET_POSITIONS, null, token, accountId);
