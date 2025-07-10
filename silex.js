@@ -172,10 +172,10 @@ function timeFilter() {
     const start = [new Date(now), new Date(now)]; 
     const end = [new Date(now), new Date(now)];   
 
-    start[0].setUTCHours(8, 0, 0, 0); 
-    end[0].setUTCHours(8, 15, 0, 0); 
-    start[1].setUTCHours(8, 15, 0, 0); 
-    end[1].setUTCHours(9, 0, 0, 0); 
+    start[0].setUTCHours(18, 0, 0, 0); 
+    end[0].setUTCHours(18, 15, 0, 0); 
+    start[1].setUTCHours(18, 15, 0, 0); 
+    end[1].setUTCHours(19, 0, 0, 0); 
 
     if (start[0].getTime() <= now.getTime() && now.getTime() < end[0].getTime())
         specRoute = 'EDFP OPT4 ML SEN';
