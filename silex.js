@@ -191,7 +191,7 @@ function timeFilter() {
 
 
 
-const run = async(socket, token, accountId) => {
+const updatePortfolio = async(socket, token, accountId) => {
 
     const orders = await callAPI(method.GET_ORDERS, null, token, null);
     const positions = await callAPI(method.GET_POSITIONS, null, token, accountId);
