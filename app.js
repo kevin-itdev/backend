@@ -28,13 +28,13 @@ const io = new Server(server, {cors: {
 io.on('connection', (socket) => {
 
     console.log('A user connected', socket.id);
-    let selectedBroker = null, lightSpeedWebSocket = null, silexReconnectTimeoutId = null, silexResponse = null;
+    let selectedBroker, lightSpeedWebSocket, silexReconnectTimeoutId, silexToken, silexAccId;
 
     socket.on('broker', async(brokerName) => {
 
         selectedBroker = brokerName;
         console.log(`Seleceted broker: ${selectedBroker}`);
-        socket.emit('positionsTable', []);//Reset the positions table when changing brokers
+        socket.emit('positionsTable', []); //Reset the positions table when changing brokers
         
         if (lightSpeedWebSocket) {
             await lightSpeedWebSocket.close();
@@ -48,13 +48,12 @@ io.on('connection', (socket) => {
             console.log('Cleared previous Silex reconnect timeout.');
         }
 
-
         if(selectedBroker === 'Lightspeed')       
             lightSpeedWebSocket = connectToLightSpeed(socket);
 
-        if(selectedBroker === 'Silex') {
-            silexResponse = await connectToSilex(socket); 
-            silexReconnectTimeoutId = setTimeout(async() => { silexResponse = await connectToSilex(socket); }, 50 * 60 * 1000);
+        else if(selectedBroker === 'Silex') {
+            [silexToken, silexAccId] = await connectToSilex(socket); 
+            silexReconnectTimeoutId = setTimeout(async() => { [silexToken, silexAccId] = await connectToSilex(socket); }, 50 * 60 * 1000);
         } 
     });
 
@@ -71,8 +70,8 @@ io.on('connection', (socket) => {
                 lightSpeedWebSocket = connectToLightSpeed(socket);
             }
 
-            if(selectedBroker === 'Silex') 
-                await openOrdSilex(socket, data, silexResponse[0], silexResponse[1]);
+            else if(selectedBroker === 'Silex') 
+                await openOrdSilex(socket, data, silexToken, silexAccId);
             
         } catch (error) { console.error('Error parsing client message:', error); }
     });
@@ -92,8 +91,8 @@ io.on('connection', (socket) => {
                 lightSpeedWebSocket = connectToLightSpeed(socket);
             }
 
-            if(selectedBroker === 'Silex') 
-                await closePosSilex(socket, parsedData, silexResponse[0], silexResponse[1]);
+            else if(selectedBroker === 'Silex') 
+                await closePosSilex(socket, parsedData, silexToken, silexAccId);
 
         } catch (error) { console.error('Error parsing client message:', error); }
     });

@@ -1,4 +1,7 @@
-
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const isBetween = require('dayjs/plugin/isBetween');
 const dotenv = require('dotenv');
 dotenv.config();
 const url = process.env.URL_SILEX;
@@ -22,15 +25,22 @@ const loginMessage = {
  'username': userName
 };
 const activePortfolioUpdateTimers = new WeakMap();
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(isBetween);
 
 
 const connectToSilex = async(socket) => {
+    
+    console.log('timeFilter route', timeFilter());
     const token = await callAPI(method.INIT, loginMessage, null, null);
     const accountId = await callAPI(method.ACC_ID, null, token, null);
+    console.log(`token: ${token} accountId: ${accountId}`);
+
     const optionsList = await callAPI(method.GET_CHAIN,{ underlyingSymbols: ['$SPX'] }, token, null);
     sendSocket(socket, 'optionsTable', optionsList.optionChains[0].optionSeries[0].optionSymbols);
     
-    socket.on('fetchOptionChainsByDate', async (data) =>{
+    socket.on('fetchOptionChainsByDate', async (data) => {
 
         console.log('Received a new date. Fetching Option Chains for:', data);
         const year = data.date.substring(2,4);
@@ -82,7 +92,7 @@ const closePosSilex = async(socket, data, token, accountId) => {
        
         if(isNaN(data[i].profits)) { //this is an order, it contains a string Order ID: ...
             
-            request = { curOrdId: data[i].profits.substring(10) };
+            request = { CurOrdId: data[i].profits.substring(4) };
             await callAPI(method.CLOSE_ORDER, request, token, null);
         }
         else { //position here
@@ -167,21 +177,21 @@ const openOrdSilex = async(socket, data, token, accountId) => {
 
 function timeFilter() {
 
-    let specRoute = 'STAGE';     // route: 'CBOE', old style from the docs  
-    const now = new Date(); 
-    const start = [new Date(now), new Date(now)]; 
-    const end = [new Date(now), new Date(now)];   
+    const MARKET_TIMEZONE = 'America/New_York';
+    const nowInMarketTime = dayjs().tz(MARKET_TIMEZONE);
 
-    start[0].setUTCHours(18, 0, 0, 0); 
-    end[0].setUTCHours(18, 15, 0, 0); 
-    start[1].setUTCHours(18, 15, 0, 0); 
-    end[1].setUTCHours(19, 0, 0, 0); 
+    const estStart1 = nowInMarketTime.set('hour', 16).set('minute', 0).set('second', 0).set('millisecond', 0); // 4:00:00.000 PM ET
+    const estEnd1   = nowInMarketTime.set('hour', 16).set('minute', 15).set('second', 0).set('millisecond', 0); // 4:15:00.000 PM ET
 
-    if (start[0].getTime() <= now.getTime() && now.getTime() < end[0].getTime())
+    const estStart2 = nowInMarketTime.set('hour', 16).set('minute', 15).set('second', 0).set('millisecond', 0); // 4:15:00.000 PM ET
+    const estEnd2   = nowInMarketTime.set('hour', 17).set('minute', 0).set('second', 0).set('millisecond', 0);   // 5:00:00.000 PM ET
+
+    let specRoute = 'STAGE';
+    if (nowInMarketTime.isBetween(estStart1, estEnd1, null, '[)')) 
         specRoute = 'EDFP OPT4 ML SEN';
-    if (start[1].getTime() <= now.getTime() && now.getTime() < end[1].getTime())
+    else if (nowInMarketTime.isBetween(estStart2, estEnd2, null, '[)')) 
         specRoute = 'EDF_SPXML_SMART_ETH';
-
+    
     return specRoute;
 }
 
@@ -194,30 +204,37 @@ function timeFilter() {
 const updatePortfolio = async(socket, token, accountId) => {
 
     const orders = await callAPI(method.GET_ORDERS, null, token, null);
+
+    // const pos = 0;
+    // console.log('orders are', orders);
+    // console.log('legs', orders[pos].multiLegOrder.legs);    
+    // console.log('orderUpdates', orders[pos].multiLegOrder.orderUpdates);
+
+
+          
     const positions = await callAPI(method.GET_POSITIONS, null, token, accountId);
+    // console.log('positions are', positions);
+
     const combinedList = [ ...orders, ...positions ]; 
 
     let updatedList = [], side;
     for(let i = 0; i <= combinedList.length - 1; i++) {
 
-        // if(combinedList[i]?.order?.ordStatus != null && (combinedList[i]?.order?.ordStatus ==='ORD_STATUS_PARTIALLY_FILLED' || combinedList[i]?.order?.ordStatus === 'ORD_STATUS_NEW' || combinedList[i]?.order?.ordStatus === 'ORD_STATUS_PENDING_NEW' || combinedList[i]?.order?.ordStatus === 'ORD_STATUS_REJECTED' )) //For orders that close a position
-        //     updatedList.push({ symbol: `${combinedList[i].order.symbol}`, contracts: combinedList[i].order.leavesQty, profits: `Order ID: ${combinedList[i].order.curOrdId}` });
-
-
         if(combinedList[i]?.multiLegOrder?.ordType === 'ORD_TYPE_LIMIT') //For multilegs
             for(let j = 0; j <= combinedList[i].multiLegOrder.legs?.length - 1; j++) {
 
-                if(combinedList[i].multiLegOrder.ordStatus === 'ORD_STATUS_NEW' /*|| combinedList[i].multiLegOrder.ordStatus === 'ORD_STATUS_PENDING_NEW' || combinedList[i].multiLegOrder.ordStatus === 'ORD_STATUS_REJECTED'*/) {
+                const status = combinedList[i].multiLegOrder.ordStatus;
+                if(status === 'ORD_STATUS_NEW' || status === 'ORD_STATUS_PENDING_NEW' || status === 'ORD_STATUS_STAGED'/* || status === 'ORD_STATUS_REJECTED'*/) {
 
                     // combinedList[i].multiLegOrder.legs[j].id
                     side = (combinedList[i].multiLegOrder.legs[j].side === 'SIDE_BUY') ? 'BUY' : 'SELL';
-                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: combinedList[i].multiLegOrder.ordStatus });
+                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: `id: ${combinedList[i].multiLegOrder.legs[j].id}` });
                 }
 
-                if(combinedList[i].multiLegOrder.ordStatus === 'ORD_STATUS_PARTIALLY_FILLED') {
+                if(status === 'ORD_STATUS_PARTIALLY_FILLED') {
 
                     side = (combinedList[i].multiLegOrder.legs[j].side === 'SIDE_BUY') ? 'BUY' : 'SELL';
-                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].leavesQty, profits: 'ORD_PARTIALLY_FILLED' });
+                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].leavesQty, profits: `id: ${combinedList[i].multiLegOrder.legs[j].id}` });
                 }      
             }
 
@@ -307,3 +324,38 @@ const sendSocket = (socket, socketName, data) => {
 }
 
 module.exports = { connectToSilex, closePosSilex, openOrdSilex, stopRecurringPortfolioUpdates };
+
+
+
+const req = { //Saif
+
+    account_id: 15298, 
+    legs: [
+        {position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_BUY', symbol: 'SPXW/250708/6180P'}, 
+        {position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_SELL', symbol:'SPXW/250708/6190P'}, 
+        {position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_SELL', symbol: 'SPXW/250708/6260C'}, 
+        {position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_BUY', symbol: 'SPXW/250708/6270C'}
+    ], 
+    ord_type: 'ORD_TYPE_LIMIT', 
+    price: -3.6, 
+    price_type: 'PRICE_TYPE_PER_UNIT', 
+    qty: 774.0, 
+    route: 'EDFP OPT4 ML SEN', 
+    tif: 'TIF_DAY'
+}
+
+const request = { //Kevin
+  account_id: 2346,
+  legs: [
+    { position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_BUY', symbol: 'SPXW/250725/3200C' },
+    { position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_SELL', symbol: 'SPXW/250725/3200P' },
+    { position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_SELL', symbol: 'SPXW/250725/3400C' },
+    { position_effect: 'POSITION_EFFECT_OPEN', ratio: 1, side: 'SIDE_BUY', symbol: 'SPXW/250725/3400P' }
+  ],
+  ord_type: 'ORD_TYPE_LIMIT',
+  price: 22,
+  price_type: 'PRICE_TYPE_PER_UNIT',
+  qty: 10,
+  route: 'STAGE',
+  tif: 'TIF_DAY'
+}
