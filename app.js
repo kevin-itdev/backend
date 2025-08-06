@@ -36,15 +36,17 @@ io.on('connection', (socket) => {
     socket.on('login', async (userId) => { //Google login
 
         console.log(`Google login for user: ${socket.id} and google Id: ${userId}`);
-        if(verifyId == 'kevinbkeena@gmail.com' || verifyId == 'david@spxmgmt.com') {
-        } else {
-            socket.emit('verifyId', 'Wrong username!');
-            socket.disconnect();
-        }
+
     });
 
 
     socket.on('broker', async(brokerName) => {
+
+        if(verifyId == 'kevinbkeena@gmail.com' || verifyId == 'david@spxmgmt.com') {
+        } else {
+            socket.emit('verifyId', 'Wrong username! Please log in again.');
+            socket.disconnect();
+        }
 
         selectedBroker = brokerName;
         console.log(`Seleceted broker: ${selectedBroker}`);
