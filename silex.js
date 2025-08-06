@@ -224,11 +224,11 @@ const updatePortfolio = async(socket, token, accountId) => {
             for(let j = 0; j <= combinedList[i].multiLegOrder.legs?.length - 1; j++) {
 
                 const status = combinedList[i].multiLegOrder.ordStatus;
-                if(status === 'ORD_STATUS_NEW' || status === 'ORD_STATUS_PENDING_NEW' || status === 'ORD_STATUS_STAGED'/* || status === 'ORD_STATUS_REJECTED'*/) {
+                if(status === 'ORD_STATUS_NEW' || status === 'ORD_STATUS_PENDING_NEW' || status === 'ORD_STATUS_STAGED'  || status === 'ORD_STATUS_WORKING'/* || status === 'ORD_STATUS_REJECTED'*/) {
 
                     // combinedList[i].multiLegOrder.legs[j].id
                     side = (combinedList[i].multiLegOrder.legs[j].side === 'SIDE_BUY') ? 'BUY' : 'SELL';
-                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: `id: ${combinedList[i].multiLegOrder.legs[j].id}` });
+                    updatedList.push({ symbol: `${side} ${combinedList[i].multiLegOrder.legs[j].symbol} ${status}`, contracts: combinedList[i].multiLegOrder.legs[j].qty, profits: `id: ${combinedList[i].multiLegOrder.legs[j].id}` });
                 }
 
                 if(status === 'ORD_STATUS_PARTIALLY_FILLED') {
